@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-feature-settings: "tnum" 1; /* tabular numerals for scientific data */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* tabular numerals for data-dense readouts */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* thin scrollbars in scroll regions */
+.scroll-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .print-card { box-shadow: none !important; border: 1px solid #e2e8f0; }
+}
