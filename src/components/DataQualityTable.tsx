@@ -15,7 +15,7 @@ export function DataQualityTable({ files }: { files: DQFile[] }) {
         <tbody>
           {files.map((f, i) => (
             <tr key={i} className="border-b border-slate-100 align-top">
-              <Td><span className="font-mono text-xs">{f.file}</span></Td>
+              <Td><span className="font-sans text-xs">{f.file}</span></Td>
               <Td>{f.station}</Td>
               <Td>
                 <span className={`inline-flex items-center gap-1 text-xs font-medium ${f.parsed ? "text-emerald-600" : "text-red-600"}`}>

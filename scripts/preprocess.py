@@ -65,6 +65,10 @@ STATIONS = {
     "eingev":  {"name": "Ein Gev", "type": "meteorological", "lat": 32.779, "lng": 35.646, "approxCoords": True},
     "knw":     {"name": "Golan Beach (KNW)", "type": "wave+current", "lat": 32.842, "lng": 35.651, "approxCoords": True},
     "knc":     {"name": "Station F (KNC)",   "type": "current",      "lat": 32.810, "lng": 35.595, "approxCoords": True},
+    "metr_a":    {"name": "Metr-A (2025)",    "type": "meteorological+lake", "lat": 32.820, "lng": 35.600, "approxCoords": True},
+    "a_probe":   {"name": "A-Probe (2025)",  "type": "water-quality",       "lat": 32.820, "lng": 35.600, "approxCoords": True},
+    "kfar_nahum":{"name": "Kfar Nahum",      "type": "meteorological",      "lat": 32.869, "lng": 35.555, "approxCoords": True},
+    "metr":      {"name": "Metr (2025)",      "type": "meteorological+lake", "lat": 32.821, "lng": 35.601, "approxCoords": True},
 }
 
 # variable -> display unit (verified)
@@ -72,6 +76,10 @@ UNITS = {
     "windSpeed": "m/s", "windDir": "deg", "airTemp": "C", "humidity": "%",
     "rainfall": "mm", "waveHeight": "m", "wavePeriod": "s", "waveDir": "deg",
     "currentMag": "cm/s", "currentDir": "deg", "sensorDepth": "mm",
+    "waterTemp": "C", "lightLevel": "lux", "pressure": "mbar",
+    "spCond": "µS/cm", "dissolvedO2": "mg/L", "turbidity": "FNU",
+    "chlorophyll": "µg/L", "orp": "mV",
+    "waveHeightMax": "m", "waveHeightTop10": "m", "wavePeriodMean": "s",
 }
 
 # Columns we deliberately exclude (unit/quality unverified).
@@ -177,11 +185,168 @@ def parse_eingev():
                           verified=["humidity","windSpeed","windDir","rainfall"],
                           unverified=["airTemp"])
 
-def finalize_meteo(station, df, raw_rows, filename, verified, unverified=None, ws_assumed=False):
+def parse_a_probe():
+    f = RAW / "Meteo" / "Daily_Summary_a_probe_2025.csv"
+    df = pd.read_csv(f)
+    raw_rows = len(df)
+    ts = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+    out = pd.DataFrame({
+        "timestamp":   ts,
+        "waterTemp":   num(df["Avg_Temp_(C)"]),
+        "spCond":      num(df["Avg_SpCond_(us/cm)"]),
+        "dissolvedO2": num(df["Avg_DO_(mg/L)"]),
+        "turbidity":   num(df["Avg_Turbidity_(FNU)"]),
+        "chlorophyll": num(df["Avg_Chlorophyll_(ug/L)"]),
+        "orp":         num(df["Avg_ORP_(mV)"]),
+    })
+    return finalize_meteo("a_probe", out, raw_rows, f.name,
+                          verified=["waterTemp","spCond","dissolvedO2","turbidity","chlorophyll","orp"],
+                          daily_summary=True)
+
+def parse_knw_daily_waves():
+    files_info = [
+        (RAW / "Lake_waves_currents" / "Daily_Summary_KNW08_Waves.csv", "KNW08"),
+        (RAW / "Lake_waves_currents" / "Daily_Summary_KNW09_Waves.csv", "KNW09"),
+        (RAW / "Lake_waves_currents" / "Daily_Summary_KNW10_Waves.csv", "KNW10"),
+        (RAW / "Lake_waves_currents" / "Daily_Summary_KNW11_Waves.csv", "KNW11"),
+    ]
+    frames, raw_total, per_file = [], 0, []
+    for f, label in files_info:
+        df = pd.read_csv(f)
+        raw_total += len(df)
+        ts = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+        sub = pd.DataFrame({
+            "timestamp":      ts,
+            "waveHeight":     num(df["Avg_Sig_Wave_Height_(m)"]),
+            "waveHeightMax":  num(df["Max_Sig_Wave_Height_(m)"]),
+            "waveHeightTop10":num(df["Max_Top_10%_Wave_Height_(m)"]),
+            "wavePeriod":     num(df["Avg_Peak_Period_(sec)"]),
+            "wavePeriodMean": num(df["Avg_Mean_Period_(sec)"]),
+            "sensorDepth":    num(df["Avg_Depth_(mm)"]),
+        })
+        sub = sub.dropna(subset=["timestamp"])
+        per_file.append({"file": f.name, "rows": len(df),
+                         "range": [iso(sub["timestamp"].min()), iso(sub["timestamp"].max())]})
+        frames.append(sub)
+    allw = pd.concat(frames, ignore_index=True).sort_values("timestamp").reset_index(drop=True)
+    # On overlap days (KNW08/KNW09 transition) keep KNW08 entry (first in sort order)
+    allw = allw.drop_duplicates(subset=["timestamp"], keep="first")
+    return {"df": allw, "raw_rows": raw_total, "per_file": per_file}
+
+def parse_metr_a():
+    f = RAW / "Meteo" / "Daily_Summary_metr_a_2025.csv"
+    df = pd.read_csv(f)
+    raw_rows = len(df)
+    # Daily summary data — timestamp set to noon to represent the daily average
+    ts = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+    out = pd.DataFrame({
+        "timestamp":  ts,
+        "waterTemp":  num(df["Avg_Water_Temp_(C)"]),
+        "airTemp":    num(df["Avg_Air_Temp_(C)"]),
+        "windSpeed":  num(df["Avg_Wind_Speed_(m/s)"]),
+        "humidity":   num(df["Avg_Humidity_(%)"]),
+        "pressure":   num(df["Avg_Pressure_(mbar)"]),
+        "rainfall":   num(df["Total_Rainfall_(mm)"]),
+        "lightLevel": num(df["Avg_Light_Level"]),
+    })
+    return finalize_meteo("metr_a", out, raw_rows, f.name,
+                          verified=["waterTemp","airTemp","windSpeed","humidity","pressure","rainfall","lightLevel"],
+                          daily_summary=True)
+
+def parse_kfar_nahum():
+    f = RAW / "Meteo" / "Daily_Summary_KfarNahum2025.csv"
+    df = pd.read_csv(f)
+    raw_rows = len(df)
+    ts = pd.to_datetime(df["day"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+    out = pd.DataFrame({
+        "timestamp": ts,
+        "airTemp":   num(df["temp_avg"]),
+        "humidity":  num(df["humidity_avg"]),
+        "windSpeed": np.nan,   # only max wind speed available; excluded to avoid biasing risk model
+        "rainfall":  num(df["total_rain"]),
+    })
+    return finalize_meteo("kfar_nahum", out, raw_rows, f.name,
+                          verified=["airTemp","humidity","rainfall"],
+                          daily_summary=True)
+
+def parse_metr():
+    f = RAW / "Meteo" / "daily_metr_summary_2025.csv"
+    df = pd.read_csv(f)
+    raw_rows = len(df)
+    ts = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+    out = pd.DataFrame({
+        "timestamp": ts,
+        "waterTemp": num(df["Water_Temp_Avg_C"]),
+        "windSpeed": num(df["Wind_Speed_Avg_ms"]),
+        "windDir":   num(df["Wind_Direction_Avg_deg"]),
+        "airTemp":   num(df["Air_Temp_Avg_C"]),
+        "humidity":  num(df["Humidity_Avg_%"]),
+        "rainfall":  num(df["Rainfall_Sum_mm"]),
+        "pressure":  num(df["Pressure_Avg_mbar"]),
+    })
+    return finalize_meteo("metr", out, raw_rows, f.name,
+                          verified=["waterTemp","windSpeed","windDir","airTemp","humidity","rainfall","pressure"],
+                          daily_summary=True)
+
+def finalize_meteo(station, df, raw_rows, filename, verified, unverified=None, ws_assumed=False, daily_summary=False):
     df = df.dropna(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
     return {"station": station, "df": df, "raw_rows": raw_rows, "filename": filename,
             "verified": verified, "unverified": unverified or [], "ws_assumed": ws_assumed,
-            "kind": "meteo"}
+            "daily_summary": daily_summary, "kind": "meteo"}
+
+def parse_bteha_daily():
+    """Combined 2025+2026 daily Bteha summaries for extending the hourly bteha time series."""
+    frames, raw_total = [], 0
+    f25 = RAW / "Meteo" / "Daily_Summary_Bteha2025.csv"
+    if f25.exists():
+        df25 = pd.read_csv(f25)
+        raw_total += len(df25)
+        ts = pd.to_datetime(df25["Date"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+        frames.append(pd.DataFrame({
+            "timestamp": ts,
+            "airTemp":   num(df25["Avg_Temp"]),
+            "humidity":  num(df25["Avg_Humidity"]),
+            "windSpeed": num(df25["Avg_Wind_Speed"]),
+            "rainfall":  num(df25["Total_Rainfall"]),
+        }))
+    f26 = RAW / "Meteo" / "Daily_Summary_Bteha2026.csv"
+    if f26.exists():
+        df26 = pd.read_csv(f26)
+        raw_total += len(df26)
+        ts = pd.to_datetime(df26["day"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+        frames.append(pd.DataFrame({
+            "timestamp": ts,
+            "airTemp":   num(df26["temp_avg"]),
+            "humidity":  num(df26["humidity_avg"]),
+            "windSpeed": np.nan,   # only max available in 2026 file; excluded to avoid biasing risk model
+            "rainfall":  num(df26["total_rain"]),
+        }))
+    if not frames:
+        return pd.DataFrame(), 0
+    combined = pd.concat(frames, ignore_index=True).sort_values("timestamp").reset_index(drop=True)
+    return combined.dropna(subset=["timestamp"]), raw_total
+
+def parse_zemah_daily():
+    """Combined 2025+2026 daily Zemah summaries for extending the hourly zemah time series."""
+    frames, raw_total = [], 0
+    for fname in ["daily_meto_zemah_summary_2025.csv", "daily_meto_zemah_summary_2026.csv"]:
+        f = RAW / "Meteo" / fname
+        if f.exists():
+            df = pd.read_csv(f)
+            raw_total += len(df)
+            ts = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce") + pd.Timedelta(hours=12)
+            frames.append(pd.DataFrame({
+                "timestamp": ts,
+                "airTemp":   num(df["Air_Temp_Avg_C"]),
+                "windSpeed": num(df["Wind_Speed_Avg_ms"]),
+                "windDir":   num(df["Wind_Direction_Avg_deg"]),
+                "humidity":  num(df["Humidity_Avg_%"]),
+                "rainfall":  num(df["Rainfall_Sum_mm"]),
+            }))
+    if not frames:
+        return pd.DataFrame(), 0
+    combined = pd.concat(frames, ignore_index=True).sort_values("timestamp").reset_index(drop=True)
+    return combined.dropna(subset=["timestamp"]), raw_total
 
 # ===========================================================================
 # 2. CURRENTS PARSER (depth profiles -> surface + depth-averaged per timestamp)
@@ -278,20 +443,64 @@ def describe(series):
             "p75": jround(valid.quantile(.85))}
 
 print("Parsing meteo stations ...")
-meteo = {m["station"]: m for m in [parse_bteha(), parse_zemah(), parse_ginosar(), parse_eingev()]}
+meteo = {m["station"]: m for m in [parse_bteha(), parse_zemah(), parse_ginosar(), parse_eingev(), parse_metr_a(), parse_a_probe(), parse_kfar_nahum(), parse_metr()]}
+print("Extending Bteha with 2025/2026 daily summaries ...")
+_bteha_ext, _bteha_ext_rows = parse_bteha_daily()
+if not _bteha_ext.empty:
+    _bteha_cutoff = meteo["bteha"]["df"]["timestamp"].max()
+    _new_bteha = _bteha_ext[_bteha_ext["timestamp"] > _bteha_cutoff].copy()
+    if not _new_bteha.empty:
+        for c in meteo["bteha"]["df"].columns:
+            if c not in _new_bteha.columns:
+                _new_bteha[c] = np.nan
+        meteo["bteha"]["df"] = pd.concat(
+            [meteo["bteha"]["df"], _new_bteha], ignore_index=True
+        ).sort_values("timestamp").reset_index(drop=True)
+        meteo["bteha"]["raw_rows"] += _bteha_ext_rows
+        print(f"  Bteha extended by {len(_new_bteha)} daily rows to {meteo['bteha']['df']['timestamp'].max().date()}")
+print("Extending Zemah with 2025/2026 daily summaries ...")
+_zemah_ext, _zemah_ext_rows = parse_zemah_daily()
+if not _zemah_ext.empty:
+    _zemah_cutoff = meteo["zemah"]["df"]["timestamp"].max()
+    _new_zemah = _zemah_ext[_zemah_ext["timestamp"] > _zemah_cutoff].copy()
+    if not _new_zemah.empty:
+        for c in meteo["zemah"]["df"].columns:
+            if c not in _new_zemah.columns:
+                _new_zemah[c] = np.nan
+        meteo["zemah"]["df"] = pd.concat(
+            [meteo["zemah"]["df"], _new_zemah], ignore_index=True
+        ).sort_values("timestamp").reset_index(drop=True)
+        meteo["zemah"]["raw_rows"] += _zemah_ext_rows
+        print(f"  Zemah extended by {len(_new_zemah)} daily rows to {meteo['zemah']['df']['timestamp'].max().date()}")
 print("Parsing lake currents ...")
 knw_cur = parse_currents_station("KNW")
 knc_cur = parse_currents_station("KNC")
 print("Parsing lake waves ...")
 knw_wav = parse_waves_station("KNW")
+print("Parsing KNW daily wave summaries (2025) ...")
+knw_wav_daily = parse_knw_daily_waves()
+# Extend existing KNW wave data with new daily summaries (keep only strictly new dates)
+_knw_end = knw_wav["df"]["timestamp"].max() if not knw_wav["df"].empty else pd.Timestamp("2024-12-30")
+_new_waves = knw_wav_daily["df"][knw_wav_daily["df"]["timestamp"] > _knw_end].copy()
+if not _new_waves.empty:
+    _new_waves["waveDir"] = np.nan   # daily summaries have no directional data
+    knw_wav["df"] = pd.concat([knw_wav["df"], _new_waves], ignore_index=True).sort_values("timestamp").reset_index(drop=True)
+    knw_wav["raw_rows"] += knw_wav_daily["raw_rows"]
+    knw_wav["per_file"].extend(knw_wav_daily["per_file"])
 
 # Build unified KNW lake frame (hourly waves + hourly surface current), KNC (current only)
 def hourly(df, cols):
     if df.empty: return df
+    # Only resample columns that actually exist in df
+    cols = [c for c in cols if c in df.columns]
+    if not cols: return pd.DataFrame(columns=["timestamp"])
     return df.set_index("timestamp").resample("1h")[cols].mean().dropna(how="all").reset_index()
 
+_wave_extra = [c for c in ["waveHeightMax","waveHeightTop10","wavePeriodMean"]
+               if c in knw_wav["df"].columns and knw_wav["df"][c].notna().any()]
+_wave_cols = ["waveHeight","wavePeriod","waveDir","sensorDepth"] + _wave_extra
 knw_lake = pd.merge(
-    hourly(knw_wav["df"], ["waveHeight","wavePeriod","waveDir","sensorDepth"]),
+    hourly(knw_wav["df"], _wave_cols),
     hourly(knw_cur["df"], ["currentMag","currentMagAvg","currentDir"]),
     on="timestamp", how="outer").sort_values("timestamp").reset_index(drop=True)
 knc_lake = hourly(knc_cur["df"], ["currentMag","currentMagAvg","currentDir"]).sort_values("timestamp").reset_index(drop=True)
@@ -396,7 +605,8 @@ for sid, meta in STATIONS.items():
     if sid in meteo:
         m = meteo[sid]; df = m["df"]
         variables = []
-        for v in ["windSpeed","windDir","airTemp","humidity","rainfall"]:
+        for v in ["windSpeed","windDir","airTemp","humidity","rainfall","waterTemp","lightLevel","pressure",
+                  "spCond","dissolvedO2","turbidity","chlorophyll","orp"]:
             if v in m["verified"] and v in df and df[v].notna().any():
                 variables.append(v)
         latest = {}
@@ -409,6 +619,8 @@ for sid, meta in STATIONS.items():
                       "lastTimestamp": rng[1], "latest": latest})
         if m["ws_assumed"]:
             entry["assumptions"].append("Wind speed unit assumed m/s (undocumented in source).")
+        if m.get("daily_summary"):
+            entry["assumptions"].append("Daily summary data (not hourly); timestamps set to noon of each day.")
         for u in m["unverified"]:
             entry["unverified"].append(u)
         # status
@@ -420,11 +632,18 @@ for sid, meta in STATIONS.items():
         rk = compute_risk({"windSpeed": winp, "rainfall": rnp}) if "windSpeed" in variables else \
              {"score": None, "category": "Insufficient Data", "contributions": [], "inputsUsed": 0}
         entry["risk"] = rk
-        entry["dataQualityNote"] = "Meteorological station. Risk uses verified wind/rainfall only; " \
-            "no wave or current data at this site."
+        if sid == "a_probe":
+            entry["dataQualityNote"] = ("Water-quality probe. Measures dissolved oxygen, chlorophyll, "
+                                        "turbidity, specific conductance, ORP and water temperature. "
+                                        "Risk model not applicable (no wind or current data).")
+        else:
+            entry["dataQualityNote"] = ("Meteorological station. Risk uses verified wind/rainfall only; "
+                                        "no wave or current data at this site.")
         DATASET_MIN.append(df["timestamp"].min()); DATASET_MAX.append(df["timestamp"].max())
     elif sid == "knw":
-        df = knw_lake; vis = ["waveHeight","wavePeriod","waveDir","currentMag","currentDir","sensorDepth"]
+        df = knw_lake
+        vis = ["waveHeight","waveHeightMax","waveHeightTop10","wavePeriod","wavePeriodMean",
+               "waveDir","currentMag","currentDir","sensorDepth"]
         variables = [v for v in vis if v in df and df[v].notna().any()]
         latest = {}
         for v in variables:
@@ -462,12 +681,19 @@ latest_obs = max(iso(x) for x in DATASET_MAX)
 # TIMESERIES.JSON  (daily + hourly aggregates per station)
 # ===========================================================================
 ts_out = {}
+ALL_METEO_VARS = ["windSpeed","airTemp","humidity","rainfall","waterTemp","lightLevel","pressure",
+                  "spCond","dissolvedO2","turbidity","chlorophyll","orp"]
 for sid in meteo:
-    df = meteo[sid]["df"]; cols = [c for c in ["windSpeed","airTemp","humidity","rainfall"] if c in df and df[c].notna().any()]
+    df = meteo[sid]["df"]
+    cols = [c for c in ALL_METEO_VARS if c in df and df[c].notna().any()]
     ts_out[sid] = {"daily": aggregate(df, cols, "1D"), "hourly": aggregate(df, cols, "1h"), "vars": cols}
-ts_out["knw"] = {"daily": aggregate(knw_lake, ["waveHeight","currentMag"], "1D"),
-                 "hourly": aggregate(knw_lake, ["waveHeight","currentMag"], "1h"),
-                 "vars": ["waveHeight","currentMag"]}
+_knw_ts_vars = ["waveHeight","currentMag"] + [
+    c for c in ["waveHeightMax","waveHeightTop10","wavePeriodMean"]
+    if c in knw_lake.columns and knw_lake[c].notna().any()
+]
+ts_out["knw"] = {"daily": aggregate(knw_lake, _knw_ts_vars, "1D"),
+                 "hourly": aggregate(knw_lake, _knw_ts_vars, "1h"),
+                 "vars": _knw_ts_vars}
 ts_out["knc"] = {"daily": aggregate(knc_lake, ["currentMag"], "1D"),
                  "hourly": aggregate(knc_lake, ["currentMag"], "1h"), "vars": ["currentMag"]}
 
@@ -523,6 +749,12 @@ desc["Zemah wind speed (m/s)"] = describe(meteo["zemah"]["df"]["windSpeed"])
 desc["Ein Gev wind speed (m/s)"] = describe(meteo["eingev"]["df"]["windSpeed"])
 desc["Bteha air temp (C)"] = describe(meteo["bteha"]["df"]["airTemp"])
 desc["Ginosar air temp (C)"] = describe(meteo["ginosar"]["df"]["airTemp"])
+desc["Metr-A water temp (C)"] = describe(meteo["metr_a"]["df"]["waterTemp"])
+desc["Metr-A wind speed (m/s)"] = describe(meteo["metr_a"]["df"]["windSpeed"])
+desc["A-Probe water temp (C)"] = describe(meteo["a_probe"]["df"]["waterTemp"])
+desc["A-Probe dissolved oxygen (mg/L)"] = describe(meteo["a_probe"]["df"]["dissolvedO2"])
+desc["A-Probe chlorophyll (µg/L)"] = describe(meteo["a_probe"]["df"]["chlorophyll"])
+desc["A-Probe turbidity (FNU)"] = describe(meteo["a_probe"]["df"]["turbidity"])
 desc["KNW wave height Hs (m)"] = describe(knw_wav["df"]["waveHeight"])
 desc["KNW current magnitude (cm/s)"] = describe(knw_cur["df"]["currentMag"])
 desc["KNC current magnitude (cm/s)"] = describe(knc_cur["df"]["currentMag"])
@@ -752,7 +984,8 @@ def dq_meteo(sid, m, expected_min):
             "depthLevels": None}
 
 for sid in meteo:
-    dq_files.append(dq_meteo(sid, meteo[sid], 10))
+    expected_min = 1440 if meteo[sid].get("daily_summary") else 10
+    dq_files.append(dq_meteo(sid, meteo[sid], expected_min))
 
 # lake currents quality (per concatenated station)
 for sid, cur, expected_levels in [("knw", knw_cur, None), ("knc", knc_cur, None)]:
@@ -812,6 +1045,9 @@ manifest = {
         "Meteo & current timestamps assumed Israel local (unlabeled in source).",
         "Current 'magnitude' per station uses the shallowest (surface) depth as default; a depth-averaged value is also computed.",
         "Map marker positions are approximate, for the stylized map only -- not survey GPS.",
+        "Metr-A (2025): daily summary data; timestamps assigned to noon. Light level unit unconfirmed (displayed as-is).",
+        "A-Probe (2025): daily water-quality summary (DO, chlorophyll, turbidity, SpCond, ORP); timestamps assigned to noon.",
+        "KNW08/KNW09 (2025): daily wave summaries extend the hourly KNW wave record. Mar-12 KNW09 deployment artifact excluded (KNW08 used for that day).",
     ],
     "excludedColumns":[f"{e['station']}.{e['column']} ({e['variable']}) -- {e['action']}" for e in EXCLUSIONS],
     "disclaimer":"This system is an academic research prototype. Its risk classifications are not official "

@@ -10,11 +10,14 @@ const TYPE_ICON = {
   meteorological: Wind,
   "wave+current": Waves,
   current: Waves,
+  "meteorological+lake": Thermometer,
+  "water-quality": Thermometer,
 } as const;
 
 export function StationCard({ station, onSelect }: { station: Station; onSelect?: (id: string) => void }) {
   const Icon = TYPE_ICON[station.type] ?? Thermometer;
   const shown = station.variables.slice(0, 4);
+  const displayName = station.name.replace(/ \(\d{4}(?:-\d{2})?\)$/, "");
 
   return (
     <Card className="p-4 hover:shadow-lg transition-shadow">
@@ -25,7 +28,7 @@ export function StationCard({ station, onSelect }: { station: Station; onSelect?
           </div>
           <div>
             <button onClick={() => onSelect?.(station.id)} className="font-semibold text-ink-900 hover:text-brand-600 text-left">
-              {station.name}
+              {displayName}
             </button>
             <p className="text-xs text-slate-400 capitalize">{station.type.replace("+", " + ")}</p>
           </div>

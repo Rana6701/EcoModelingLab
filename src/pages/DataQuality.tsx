@@ -73,7 +73,7 @@ export function DataQuality() {
               <div key={i} className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
                 <div className="flex items-center gap-2">
                   <Pill tone="amber">{u.station}</Pill>
-                  <span className="font-mono text-sm text-ink-900">{u.column}</span>
+                  <span className="font-sans text-sm text-ink-900">{u.column}</span>
                   <span className="text-xs text-slate-400">→ {u.variable}</span>
                 </div>
                 <p className="text-sm text-slate-700 mt-2">{u.reason}</p>
@@ -116,7 +116,7 @@ export function DataQuality() {
         {manifest.excludedColumns.length === 0 ? <Empty title="None" /> : (
           <ul className="space-y-1.5">
             {manifest.excludedColumns.map((c, i) => (
-              <li key={i} className="text-sm font-mono text-slate-700 bg-slate-50 rounded-lg px-3 py-2">{c}</li>
+              <li key={i} className="text-sm font-sans text-slate-700 bg-slate-50 rounded-lg px-3 py-2">{c}</li>
             ))}
           </ul>
         )}
@@ -127,7 +127,7 @@ export function DataQuality() {
         <SectionTitle title="Parse errors" />
         {dq.parseErrors.length === 0
           ? <InfoNote>No parse errors were recorded — all {dq.filesParsed} files parsed successfully.</InfoNote>
-          : <ul className="space-y-1.5">{dq.parseErrors.map((e, i) => <li key={i} className="text-sm text-red-700 font-mono">{e}</li>)}</ul>}
+          : <ul className="space-y-1.5">{dq.parseErrors.map((e, i) => <li key={i} className="text-sm text-red-700 font-sans">{e}</li>)}</ul>}
       </Card>
 
       {/* In-app importer */}

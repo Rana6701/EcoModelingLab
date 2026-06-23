@@ -13,7 +13,7 @@ export function Header({ manifest }: { manifest: Manifest | null }) {
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">SmartKinneret</h1>
             <p className="text-brand-100 text-xs sm:text-sm">
-              Lake Kinneret environmental risk monitoring — academic prototype
+              Lake Kinneret environmental risk monitoring
             </p>
           </div>
         </div>

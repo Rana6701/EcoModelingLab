@@ -1,11 +1,14 @@
 // Central type definitions for the normalized processed data model.
 
-export type StationType = "meteorological" | "wave+current" | "current";
+export type StationType = "meteorological" | "wave+current" | "current" | "meteorological+lake" | "water-quality";
 export type RiskCategory = "Low Risk" | "Moderate Risk" | "High Risk" | "Insufficient Data";
 export type StationStatus = "Available" | "Warning" | "Missing";
 export type VariableKey =
   | "windSpeed" | "windDir" | "airTemp" | "humidity" | "rainfall"
-  | "waveHeight" | "wavePeriod" | "waveDir" | "currentMag" | "currentDir" | "sensorDepth";
+  | "waveHeight" | "waveHeightMax" | "waveHeightTop10" | "wavePeriod" | "wavePeriodMean" | "waveDir"
+  | "currentMag" | "currentDir" | "sensorDepth"
+  | "waterTemp" | "pressure" | "lightLevel"
+  | "spCond" | "dissolvedO2" | "turbidity" | "chlorophyll" | "orp";
 
 export interface LatestValue {
   value: number | null;

@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { Header } from "./components/Header";
 import { Navigation, type PageId } from "./components/Navigation";
-import { Disclaimer } from "./components/Disclaimer";
 import { loadProcessedData, type ProcessedData } from "./lib/dataLoader";
 import { Dashboard } from "./pages/Dashboard";
 import { SensorNetwork } from "./pages/SensorNetwork";
@@ -48,7 +47,7 @@ export default function App() {
               The app could not load <code>/data/processed</code>. Run <code>npm run preprocess</code> to
               generate it from the raw files in <code>data_raw/</code>, then reload.
             </p>
-            <p className="text-xs text-amber-700 mt-3 font-mono break-all">{error}</p>
+            <p className="text-xs text-amber-700 mt-3 font-sans break-all">{error}</p>
           </div>
         </div>
       </div>
@@ -72,7 +71,6 @@ export default function App() {
         <Header manifest={data.manifest} />
         <Navigation page={page} onNavigate={navigate} />
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-          <Disclaimer />
           {page === "dashboard" && <Dashboard />}
           {page === "sensors" && <SensorNetwork />}
           {page === "map" && <LakeMapPage />}
@@ -83,8 +81,7 @@ export default function App() {
           {page === "quality" && <DataQuality />}
         </main>
         <footer className="border-t border-slate-200 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <Disclaimer compact />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-end">
             <p className="text-[11px] text-slate-400 tabular">
               Risk model v{data.manifest.riskVersion} · generated {data.manifest.generatedAt}
             </p>

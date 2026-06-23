@@ -90,7 +90,20 @@ export function Dashboard() {
         <SectionTitle title="Sensor network" subtitle="Tap a station for details"
           right={<button onClick={() => navigate("sensors")} className="text-sm text-brand-600 font-medium no-print">View all →</button>} />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {stations.map((s) => (
+          {(() => {
+            const seenNames = new Set<string>();
+            const seenData = new Set<string>();
+            return stations.filter(s => {
+              const base = s.name.replace(/ \(\d{4}(?:-\d{2})?\)$/, "").trim();
+              if (seenNames.has(base)) return false;
+              seenNames.add(base);
+              // Also deduplicate stations with identical readings and timestamps
+              const fingerprint = `${s.lastTimestamp}|${s.risk.score}|${s.type}`;
+              if (seenData.has(fingerprint)) return false;
+              seenData.add(fingerprint);
+              return true;
+            });
+          })().map((s) => (
             <StationCard key={s.id} station={s}
               onSelect={(id) => { setSelectedStation(id); navigate("sensors"); }} />
           ))}

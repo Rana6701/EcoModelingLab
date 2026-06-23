@@ -93,7 +93,7 @@ export function Importer() {
             <div className="flex flex-wrap gap-2">
               {preview.mapped.map((m, i) => (
                 <span key={i} className={`text-xs rounded-lg px-2 py-1 border ${m.canonical ? "border-brand-200 bg-brand-50 text-brand-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
-                  <span className="font-mono">{m.source}</span>
+                  <span className="font-sans">{m.source}</span>
                   {m.canonical && <span> → {VARIABLES[m.canonical as keyof typeof VARIABLES]?.label ?? m.canonical}</span>}
                 </span>
               ))}
