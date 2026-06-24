@@ -5,6 +5,7 @@ import { loadProcessedData, type ProcessedData } from "./lib/dataLoader";
 import { Dashboard } from "./pages/Dashboard";
 import { SensorNetwork } from "./pages/SensorNetwork";
 import { LakeMapPage } from "./pages/LakeMapPage";
+import { BeachSafety } from "./pages/BeachSafety";
 import { Alerts } from "./pages/Alerts";
 import { Forecast } from "./pages/Forecast";
 import { Reports } from "./pages/Reports";
@@ -74,6 +75,7 @@ export default function App() {
           {page === "dashboard" && <Dashboard />}
           {page === "sensors" && <SensorNetwork />}
           {page === "map" && <LakeMapPage />}
+          {page === "beaches" && <BeachSafety />}
           {page === "alerts" && <Alerts />}
           {page === "forecast" && <Forecast />}
           {page === "reports" && <Reports />}

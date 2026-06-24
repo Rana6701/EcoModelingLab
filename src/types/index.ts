@@ -185,3 +185,13 @@ export interface RiskConfigData {
   knwSeries: RiskResult[];
   kncSeries: RiskResult[];
 }
+
+export interface Beach {
+  id: string;
+  name: string;       // Hebrew
+  nameEn: string;     // English
+  lat: number;
+  lng: number;
+  stationId: string;
+  stationName: string;
+}

@@ -1,20 +1,21 @@
 import {
-  LayoutDashboard, Radio, Map, Bell, TrendingUp, BarChart3, Info, ShieldCheck,
+  LayoutDashboard, Radio, Map, Bell, TrendingUp, BarChart3, Info, ShieldCheck, Umbrella,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type PageId =
-  | "dashboard" | "sensors" | "map" | "alerts" | "forecast" | "reports" | "public" | "quality";
+  | "dashboard" | "sensors" | "map" | "beaches" | "alerts" | "forecast" | "reports" | "public" | "quality";
 
 export const PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "sensors", label: "Sensor Network", icon: Radio },
-  { id: "map", label: "Lake Map", icon: Map },
-  { id: "alerts", label: "Alerts", icon: Bell },
-  { id: "forecast", label: "Forecast", icon: TrendingUp },
-  { id: "reports", label: "Reports & Statistics", icon: BarChart3 },
-  { id: "public", label: "Public Information", icon: Info },
-  { id: "quality", label: "Data Quality", icon: ShieldCheck },
+  { id: "dashboard",  label: "Dashboard",           icon: LayoutDashboard },
+  { id: "beaches",    label: "Beach Safety",         icon: Umbrella },
+  { id: "alerts",     label: "Alerts",               icon: Bell },
+  { id: "forecast",   label: "Forecast",             icon: TrendingUp },
+  { id: "map",        label: "Lake Map",             icon: Map },
+  { id: "sensors",    label: "Sensor Network",       icon: Radio },
+  { id: "reports",    label: "Reports & Statistics", icon: BarChart3 },
+  { id: "quality",    label: "Data Quality",         icon: ShieldCheck },
+  { id: "public",     label: "Public Information",   icon: Info },
 ];
 
 export function Navigation({ page, onNavigate }: { page: PageId; onNavigate: (p: PageId) => void }) {

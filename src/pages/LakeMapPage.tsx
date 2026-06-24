@@ -10,7 +10,7 @@ import { MapPin } from "lucide-react";
 
 export function LakeMapPage() {
   const { data, selectedStation, setSelectedStation, navigate } = useApp();
-  const { stations } = data;
+  const { stations, beaches } = data;
   const [sel, setSel] = useState<string | null>(selectedStation ?? stations[0]?.id ?? null);
   const station = stations.find((s) => s.id === sel) ?? null;
 
@@ -21,8 +21,12 @@ export function LakeMapPage() {
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-6">
         <Card className="p-5">
-          <LakeMap stations={stations} selected={sel}
-            onSelect={(id) => { setSel(id); setSelectedStation(id); }} />
+          <LakeMap
+            stations={stations}
+            beaches={beaches}
+            selected={sel}
+            onSelect={(id) => { setSel(id); setSelectedStation(id); }}
+          />
         </Card>
 
         <div className="space-y-4">

@@ -6,12 +6,13 @@
 // =====================================================================
 
 import type {
-  AlertsData, DataQuality, Manifest, RiskConfigData, Station, Statistics, TimeSeries,
+  AlertsData, Beach, DataQuality, Manifest, RiskConfigData, Station, Statistics, TimeSeries,
 } from "../types";
 
 export interface ProcessedData {
   manifest: Manifest;
   stations: Station[];
+  beaches: Beach[];
   timeseries: TimeSeries;
   alerts: AlertsData;
   dataQuality: DataQuality;
@@ -31,16 +32,17 @@ let cache: ProcessedData | null = null;
 
 export async function loadProcessedData(): Promise<ProcessedData> {
   if (cache) return cache;
-  const [manifest, stations, timeseries, alerts, dataQuality, statistics, risk] =
+  const [manifest, stations, beaches, timeseries, alerts, dataQuality, statistics, risk] =
     await Promise.all([
       getJson<Manifest>("manifest.json"),
       getJson<Station[]>("stations.json"),
+      getJson<Beach[]>("beaches.json"),
       getJson<TimeSeries>("timeseries.json"),
       getJson<AlertsData>("alerts.json"),
       getJson<DataQuality>("dataQuality.json"),
       getJson<Statistics>("statistics.json"),
       getJson<RiskConfigData>("risk.json"),
     ]);
-  cache = { manifest, stations, timeseries, alerts, dataQuality, statistics, risk };
+  cache = { manifest, stations, beaches, timeseries, alerts, dataQuality, statistics, risk };
   return cache;
 }

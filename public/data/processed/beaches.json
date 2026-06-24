@@ -1,0 +1,65 @@
+[
+  {
+    "id": "golan_beach",
+    "name": "חוף הגולן",
+    "nameEn": "Golan Beach",
+    "lat": 32.842,
+    "lng": 35.651,
+    "stationId": "knw",
+    "stationName": "Golan Beach (KNW)"
+  },
+  {
+    "id": "ein_gev",
+    "name": "חוף עין גב",
+    "nameEn": "Ein Gev Beach",
+    "lat": 32.779,
+    "lng": 35.650,
+    "stationId": "eingev",
+    "stationName": "Ein Gev"
+  },
+  {
+    "id": "ginosar",
+    "name": "חוף גינוסר",
+    "nameEn": "Ginosar Beach",
+    "lat": 32.844,
+    "lng": 35.512,
+    "stationId": "ginosar",
+    "stationName": "Ginosar"
+  },
+  {
+    "id": "kinneret",
+    "name": "חוף קינרת",
+    "nameEn": "Kinneret Beach",
+    "lat": 32.691,
+    "lng": 35.577,
+    "stationId": "zemah",
+    "stationName": "Zemah"
+  },
+  {
+    "id": "kfar_nahum",
+    "name": "חוף כפר נחום",
+    "nameEn": "Kfar Nahum Beach",
+    "lat": 32.879,
+    "lng": 35.555,
+    "stationId": "kfar_nahum",
+    "stationName": "Kfar Nahum"
+  },
+  {
+    "id": "bteha",
+    "name": "חוף הבטחה",
+    "nameEn": "Bteha Beach",
+    "lat": 32.876,
+    "lng": 35.628,
+    "stationId": "bteha",
+    "stationName": "Bteha"
+  },
+  {
+    "id": "tiberias",
+    "name": "חוף טבריה",
+    "nameEn": "Tiberias Beach",
+    "lat": 32.789,
+    "lng": 35.516,
+    "stationId": "metr_a",
+    "stationName": "Metr-A (2025)"
+  }
+]
