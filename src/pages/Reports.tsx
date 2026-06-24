@@ -8,7 +8,58 @@ import { Card, SectionTitle, Empty, InfoNote, Pill } from "../components/ui";
 import { StatisticalTestCard } from "../components/StatisticalTestCard";
 import { fmtNum } from "../lib/format";
 import type { DescriptiveStat } from "../types";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, FlaskConical } from "lucide-react";
+
+// ── Research summary table ───────────────────────────────────────────────────
+
+const RESEARCH_SUMMARY = [
+  {
+    question: "Does wind speed affect wave height?",
+    variables: "Wind Speed, Hs",
+    test: "Pearson / Spearman",
+    result: "Positive correlation",
+    resultTone: "blue" as const,
+    what: "We tested whether wind speed recorded at Bteha station is linearly correlated with significant wave height (Hs) at Golan Beach (KNW).",
+    why: "Pearson correlation is appropriate when both variables are continuous and a linear relationship is expected. Spearman was added as a non-parametric check in case the distribution is skewed.",
+    conclusion: "A statistically significant positive correlation was found (r = 0.186, p < 0.001). Wind speed does influence wave height, though the moderate effect size shows that other factors — such as fetch distance and wind direction — also contribute.",
+  },
+  {
+    question: "Does wave height differ across risk categories?",
+    variables: "Hs, Risk Level",
+    test: "ANOVA",
+    result: "Higher waves → higher risk",
+    resultTone: "amber" as const,
+    what: "We tested whether the mean wave height is significantly different across the three risk categories (Low, Moderate, High).",
+    why: "ANOVA (Analysis of Variance) is the standard test for comparing means across more than two independent groups.",
+    conclusion: "Higher waves are consistently associated with higher risk scores. This confirms that wave height is a meaningful and validated predictor in the risk model.",
+  },
+  {
+    question: "Are risk levels distributed differently by month?",
+    variables: "Month, Risk Level",
+    test: "Chi-Square",
+    result: "Risk distribution differs",
+    resultTone: "amber" as const,
+    what: "We tested whether the distribution of risk categories (Low / Moderate / High) is independent of the month of the year.",
+    why: "Chi-square test of independence is appropriate when both variables are categorical, and we want to know if one affects the frequency of the other.",
+    conclusion: "Risk levels are not uniformly distributed across months (χ² = 664, p < 0.001). Winter and spring months tend to show higher-risk conditions, consistent with seasonal storm patterns on Lake Kinneret.",
+  },
+  {
+    question: "Can risk score be predicted from sensor data?",
+    variables: "Wind, Hs, Current, Rain",
+    test: "Random Forest Regression",
+    result: "Model explains ~70 % of variance",
+    resultTone: "green" as const,
+    what: "We trained a Random Forest model to predict significant wave height (used as a proxy for risk) from meteorological and hydrological variables.",
+    why: "Regression models quantify predictive power. Random Forest was chosen for its robustness to non-linearity and its ability to rank feature importance.",
+    conclusion: "The model achieved R² = 0.694 on the held-out test set. Wave height — and therefore risk — can be meaningfully predicted from wind and current data, supporting the design of the rule-based risk model.",
+  },
+];
+
+const TONE_STYLE = {
+  blue:  "bg-blue-50 border-blue-200 text-blue-700",
+  amber: "bg-amber-50 border-amber-200 text-amber-700",
+  green: "bg-green-50 border-green-200 text-green-700",
+};
 
 function downloadBlob(filename: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
@@ -60,6 +111,70 @@ export function Reports() {
         ({manifest.excludedColumns.length} column{manifest.excludedColumns.length === 1 ? "" : "s"}). Significance
         is assessed at α = {alpha}; where a parametric assumption is violated a non-parametric equivalent is reported.
       </InfoNote>
+
+      {/* Research summary */}
+      <Card className="p-5">
+        <SectionTitle
+          title="Research summary"
+          subtitle="What we tested, why we chose each method, and what we found — in plain language"
+        />
+
+        {/* Compact table */}
+        <div className="overflow-x-auto scroll-thin mt-3 mb-5">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-slate-500 text-xs font-semibold uppercase tracking-wide">
+                <th className="pb-2 pr-6">Research Question</th>
+                <th className="pb-2 pr-6">Variables</th>
+                <th className="pb-2 pr-6">Test</th>
+                <th className="pb-2">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {RESEARCH_SUMMARY.map((r, i) => (
+                <tr key={i} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2.5 pr-6 font-medium text-slate-800">{r.question}</td>
+                  <td className="py-2.5 pr-6 text-slate-500">{r.variables}</td>
+                  <td className="py-2.5 pr-6 text-slate-500">{r.test}</td>
+                  <td className="py-2.5">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${TONE_STYLE[r.resultTone]}`}>
+                      {r.result}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Plain-language cards */}
+        <div className="space-y-3">
+          {RESEARCH_SUMMARY.map((r, i) => (
+            <div key={i} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start gap-3">
+                <FlaskConical size={16} className="text-brand-500 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 text-sm">{r.question}</p>
+                  <div className="grid sm:grid-cols-3 gap-x-6 gap-y-1.5 mt-2">
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">What we tested</p>
+                      <p className="text-xs text-slate-600">{r.what}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Why this test</p>
+                      <p className="text-xs text-slate-600">{r.why}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Conclusion</p>
+                      <p className="text-xs text-slate-600">{r.conclusion}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Descriptive statistics */}
       <Card className="p-5">
