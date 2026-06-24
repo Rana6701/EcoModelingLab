@@ -1,29 +1,34 @@
 import {
-  LayoutDashboard, Radio, Map, Bell, TrendingUp, BarChart3, Info, ShieldCheck, Umbrella,
+  LayoutDashboard, Radio, Map, Bell, TrendingUp, BarChart3, Info, Umbrella, FlaskConical,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 export type PageId =
-  | "dashboard" | "sensors" | "map" | "beaches" | "alerts" | "forecast" | "reports" | "public" | "quality";
+  | "dashboard" | "sensors" | "map" | "beaches" | "alerts" | "forecast" | "reports" | "research" | "public";
 
-export const PAGES: { id: PageId; label: string; icon: LucideIcon }[] = [
-  { id: "dashboard",  label: "Dashboard",           icon: LayoutDashboard },
-  { id: "beaches",    label: "Beach Safety",         icon: Umbrella },
-  { id: "alerts",     label: "Alerts",               icon: Bell },
-  { id: "forecast",   label: "Forecast",             icon: TrendingUp },
-  { id: "map",        label: "Lake Map",             icon: Map },
-  { id: "sensors",    label: "Sensor Network",       icon: Radio },
-  { id: "reports",    label: "Reports & Statistics", icon: BarChart3 },
-  { id: "quality",    label: "Data Quality",         icon: ShieldCheck },
-  { id: "public",     label: "Public Information",   icon: Info },
+type PageDef = { id: PageId; key: keyof ReturnType<typeof useLanguage>["tr"]["nav"]; icon: LucideIcon };
+
+const PAGE_DEFS: PageDef[] = [
+  { id: "dashboard", key: "dashboard", icon: LayoutDashboard },
+  { id: "beaches",   key: "beaches",   icon: Umbrella },
+  { id: "alerts",    key: "alerts",    icon: Bell },
+  { id: "forecast",  key: "forecast",  icon: TrendingUp },
+  { id: "map",       key: "map",       icon: Map },
+  { id: "sensors",   key: "sensors",   icon: Radio },
+  { id: "reports",   key: "reports",   icon: BarChart3 },
+  { id: "research",  key: "research",  icon: FlaskConical },
+  { id: "public",    key: "public",    icon: Info },
 ];
 
 export function Navigation({ page, onNavigate }: { page: PageId; onNavigate: (p: PageId) => void }) {
+  const { tr } = useLanguage();
+
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-20 no-print">
-      <div className="max-w-7xl mx-auto px-2 sm:px-6">
+    <nav className="bg-white border-b border-slate-200 sticky top-0 z-20 no-print overflow-x-hidden">
+      <div className="w-full max-w-[1440px] mx-auto px-2 sm:px-6 xl:px-8">
         <div className="flex gap-1 overflow-x-auto scroll-thin">
-          {PAGES.map((p) => {
+          {PAGE_DEFS.map((p) => {
             const Icon = p.icon;
             const active = page === p.id;
             return (
@@ -37,7 +42,7 @@ export function Navigation({ page, onNavigate }: { page: PageId; onNavigate: (p:
                 }`}
               >
                 <Icon size={16} />
-                {p.label}
+                {tr.nav[p.key]}
               </button>
             );
           })}

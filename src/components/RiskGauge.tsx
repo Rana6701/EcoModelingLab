@@ -1,8 +1,11 @@
 import { RISK_COLOR } from "../lib/format";
 import { categoryForScore } from "../config/riskConfig";
+import { useLanguage } from "../context/LanguageContext";
+import type { RiskCategory } from "../types";
 
 /** Semicircular gauge (0–100) coloured by the risk category. */
 export function RiskGauge({ score, size = 180 }: { score: number | null; size?: number }) {
+  const { tr } = useLanguage();
   const w = size;
   const h = size / 2 + 26;
   const cx = w / 2;
@@ -10,6 +13,13 @@ export function RiskGauge({ score, size = 180 }: { score: number | null; size?: 
   const r = size / 2 - 14;
   const category = categoryForScore(score);
   const color = RISK_COLOR[category];
+
+  const LABELS: Record<RiskCategory, string> = {
+    "Low Risk": tr.risk.lowRisk,
+    "Moderate Risk": tr.risk.moderateRisk,
+    "High Risk": tr.risk.highRisk,
+    "Insufficient Data": tr.risk.insufficientData,
+  };
 
   const frac = score === null ? 0 : Math.max(0, Math.min(1, score / 100));
   const endDeg = 180 - frac * 180;
@@ -26,7 +36,7 @@ export function RiskGauge({ score, size = 180 }: { score: number | null; size?: 
         {score === null ? "—" : score}
       </text>
       <text x={cx} y={cy + 18} textAnchor="middle" fontSize={12} fontWeight={600} fill={color}>
-        {category}
+        {LABELS[category]}
       </text>
     </svg>
   );

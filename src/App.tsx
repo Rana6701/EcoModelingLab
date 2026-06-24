@@ -10,7 +10,7 @@ import { Alerts } from "./pages/Alerts";
 import { Forecast } from "./pages/Forecast";
 import { Reports } from "./pages/Reports";
 import { PublicInfo } from "./pages/PublicInfo";
-import { DataQuality } from "./pages/DataQuality";
+import { ResearchSummary } from "./pages/ResearchSummary";
 
 interface AppState {
   data: ProcessedData;
@@ -59,7 +59,7 @@ export default function App() {
     return (
       <div className="min-h-full">
         <Header manifest={null} />
-        <div className="max-w-7xl mx-auto p-8 animate-pulse text-slate-400">Loading monitoring data…</div>
+        <div className="max-w-[1440px] mx-auto p-8 animate-pulse text-slate-400">Loading monitoring data…</div>
       </div>
     );
   }
@@ -68,10 +68,10 @@ export default function App() {
 
   return (
     <Ctx.Provider value={state}>
-      <div className="min-h-full flex flex-col">
+      <div className="flex flex-col flex-1">
         <Header manifest={data.manifest} />
         <Navigation page={page} onNavigate={navigate} />
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 xl:px-8 py-6 space-y-6">
           {page === "dashboard" && <Dashboard />}
           {page === "sensors" && <SensorNetwork />}
           {page === "map" && <LakeMapPage />}
@@ -79,11 +79,11 @@ export default function App() {
           {page === "alerts" && <Alerts />}
           {page === "forecast" && <Forecast />}
           {page === "reports" && <Reports />}
+          {page === "research" && <ResearchSummary />}
           {page === "public" && <PublicInfo />}
-          {page === "quality" && <DataQuality />}
         </main>
         <footer className="border-t border-slate-200 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-end">
+          <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 xl:px-8 py-4 flex items-center justify-end">
             <p className="text-[11px] text-slate-400 tabular">
               Risk model v{data.manifest.riskVersion} · generated {data.manifest.generatedAt}
             </p>

@@ -2,8 +2,11 @@ import type { Alert } from "../types";
 import { VARIABLES } from "../config/unitsConfig";
 import { fmtDateTime } from "../lib/format";
 import { AlertTriangle, AlertCircle } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 export function AlertCard({ alert }: { alert: Alert }) {
+  const { tr } = useLanguage();
+  const ac = tr.components.alertCard;
   const high = alert.severity === "High Risk";
   const meta = VARIABLES[alert.variable];
   return (
@@ -24,16 +27,18 @@ export function AlertCard({ alert }: { alert: Alert }) {
           <div className="flex flex-wrap gap-2 mt-2 text-[11px] tabular">
             {alert.value !== null && (
               <span className="bg-white/70 border border-slate-200 rounded-lg px-2 py-0.5">
-                value: {alert.value} {meta?.unit}
+                {ac.value} {alert.value} {meta?.unit}
               </span>
             )}
             {alert.threshold !== null && (
               <span className="bg-white/70 border border-slate-200 rounded-lg px-2 py-0.5">
-                p85 threshold: {alert.threshold} {meta?.unit}
+                {ac.threshold} {alert.threshold} {meta?.unit}
               </span>
             )}
             {alert.score !== null && (
-              <span className="bg-white/70 border border-slate-200 rounded-lg px-2 py-0.5">risk score: {alert.score}</span>
+              <span className="bg-white/70 border border-slate-200 rounded-lg px-2 py-0.5">
+                {ac.riskScore} {alert.score}
+              </span>
             )}
           </div>
         </div>

@@ -10,12 +10,11 @@ import { getBlock } from "../lib/select";
 import { fmtNum } from "../lib/format";
 import type { VariableKey } from "../types";
 import { TrendingUp } from "lucide-react";
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+import { useLanguage } from "../context/LanguageContext";
 
 interface MonthStat { month: string; mean: number | null; n: number; }
 
-function climatology(timestamps: string[], values: (number | null)[]): MonthStat[] {
+function climatology(months: string[], timestamps: string[], values: (number | null)[]): MonthStat[] {
   const sums = Array(12).fill(0);
   const counts = Array(12).fill(0);
   for (let i = 0; i < timestamps.length; i++) {
@@ -25,7 +24,7 @@ function climatology(timestamps: string[], values: (number | null)[]): MonthStat
     if (m < 0 || m > 11) continue;
     sums[m] += v; counts[m] += 1;
   }
-  return MONTHS.map((month, i) => ({
+  return months.map((month, i) => ({
     month,
     mean: counts[i] > 0 ? Math.round((sums[i] / counts[i]) * 100) / 100 : null,
     n: counts[i],
@@ -35,6 +34,9 @@ function climatology(timestamps: string[], values: (number | null)[]): MonthStat
 export function Forecast() {
   const { data } = useApp();
   const { stations, timeseries } = data;
+  const { tr } = useLanguage();
+  const f = tr.forecast;
+  const months = tr.months;
 
   const chartStations = useMemo(
     () => stations.filter((s) => timeseries[s.id]?.vars.length),
@@ -50,8 +52,8 @@ export function Forecast() {
     if (!effective) return [];
     const block = getBlock(timeseries, stationId, "daily");
     if (!block) return [];
-    return climatology(block.timestamps as string[], (block[effective] as (number | null)[]) ?? []);
-  }, [timeseries, stationId, effective]);
+    return climatology(months, block.timestamps as string[], (block[effective] as (number | null)[]) ?? []);
+  }, [timeseries, stationId, effective, months]);
 
   const valid = stats.filter((s) => s.mean !== null);
   const peak = valid.length ? valid.reduce((a, b) => ((b.mean ?? 0) > (a.mean ?? 0) ? b : a)) : null;
@@ -62,48 +64,47 @@ export function Forecast() {
 
   return (
     <div className="space-y-6">
-      <SectionTitle title="Forecast" subtitle="Seasonal pattern analysis from historical observations" />
+      <SectionTitle title={f.title} subtitle={f.subtitle} />
 
       <InfoNote tone="amber">
-        <strong>Experimental Statistical Estimate — Not an Official Forecast.</strong> The values below are
-        the historical monthly averages of each variable computed directly from the observed record. They
-        describe the typical seasonal pattern; they are not a predictive weather forecast and contain no
-        random or simulated data. Use official meteorological services for real forecasts.
+        <strong>{f.disclaimerTitle}</strong> {f.disclaimer}
       </InfoNote>
 
       <FilterBar>
-        <Select label="Station" value={stationId} onChange={setStationId}
+        <Select label={f.station} value={stationId} onChange={setStationId}
           options={chartStations.map((s) => ({ value: s.id, label: s.name }))} />
-        <Select label="Variable" value={effective ?? ""} onChange={(v) => setVariable(v as VariableKey)}
+        <Select label={f.variable} value={effective ?? ""} onChange={(v) => setVariable(v as VariableKey)}
           options={vars.map((v) => ({ value: v, label: VARIABLES[v].label }))} />
       </FilterBar>
 
       {!effective || valid.length === 0 ? (
-        <Card className="p-5"><Empty hint="No verified observations available to build a seasonal pattern for this selection." /></Card>
+        <Card className="p-5"><Empty hint={f.noData} /></Card>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-4">
             <Card className="p-4">
-              <p className="text-xs text-slate-400 uppercase tracking-wide">Typical peak month</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wide">{f.peakMonth}</p>
               <p className="text-xl font-bold text-ink-900 mt-1">{peak?.month}</p>
               <p className="text-sm text-slate-500 tabular">{fmtNum(peak?.mean, meta?.decimals ?? 2)} {meta?.unit}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs text-slate-400 uppercase tracking-wide">Typical low month</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wide">{f.lowMonth}</p>
               <p className="text-xl font-bold text-ink-900 mt-1">{low?.month}</p>
               <p className="text-sm text-slate-500 tabular">{fmtNum(low?.mean, meta?.decimals ?? 2)} {meta?.unit}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs text-slate-400 uppercase tracking-wide">Overall mean</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wide">{f.overallMean}</p>
               <p className="text-xl font-bold text-ink-900 mt-1 tabular">{fmtNum(overall, meta?.decimals ?? 2)}</p>
               <p className="text-sm text-slate-500">{meta?.unit}</p>
             </Card>
           </div>
 
           <Card className="p-5">
-            <SectionTitle title={`Monthly average — ${meta?.label}`}
-              subtitle="Historical climatology across the full observed record"
-              right={<span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><TrendingUp size={14} /> {meta?.unit}</span>} />
+            <SectionTitle
+              title={f.monthlyAvg.replace("{label}", meta?.label ?? "")}
+              subtitle={f.climatology}
+              right={<span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><TrendingUp size={14} /> {meta?.unit}</span>}
+            />
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={rows} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
@@ -122,10 +123,7 @@ export function Forecast() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-            <p className="text-[11px] text-slate-400 mt-2">
-              Bars are observed monthly means; light/empty bars indicate months with no verified data. The
-              sample size (n days) is shown in the tooltip.
-            </p>
+            <p className="text-[11px] text-slate-400 mt-2">{f.chartNote}</p>
           </Card>
         </>
       )}

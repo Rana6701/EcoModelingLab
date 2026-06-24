@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
@@ -31,11 +32,13 @@ export function Pill({ children, tone = "slate" }: { children: ReactNode; tone?:
   return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${map[tone]}`}>{children}</span>;
 }
 
-export function Empty({ title = "No data available", hint }: { title?: string; hint?: string }) {
+export function Empty({ title, hint }: { title?: string; hint?: string }) {
+  const { tr } = useLanguage();
+  const label = title ?? tr.components.empty.noData;
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 px-6 text-slate-400">
       <div className="w-12 h-12 rounded-full bg-slate-100 grid place-items-center mb-3 text-slate-300 text-xl">∅</div>
-      <p className="font-medium text-slate-500">{title}</p>
+      <p className="font-medium text-slate-500">{label}</p>
       {hint && <p className="text-sm mt-1 max-w-sm">{hint}</p>}
     </div>
   );

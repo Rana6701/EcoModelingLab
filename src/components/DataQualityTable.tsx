@@ -7,7 +7,7 @@ export function DataQualityTable({ files }: { files: DQFile[] }) {
     <div className="overflow-x-auto scroll-thin">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-slate-400 border-b border-slate-200">
+          <tr className="text-start text-slate-400 border-b border-slate-200">
             <Th>File</Th><Th>Station</Th><Th>Status</Th><Th>Rows</Th>
             <Th>Date range</Th><Th>Usable %</Th><Th>Duplicates</Th><Th>Flags</Th>
           </tr>
@@ -23,10 +23,10 @@ export function DataQualityTable({ files }: { files: DQFile[] }) {
                   {f.parsed ? "Parsed" : "Failed"}
                 </span>
               </Td>
-              <Td className="tabular">{f.rows.toLocaleString()}<span className="text-slate-300"> / {f.rawRows.toLocaleString()}</span></Td>
-              <Td className="tabular whitespace-nowrap">{fmtDateRange(f.dateRange)}</Td>
-              <Td className="tabular">{f.usablePct}%</Td>
-              <Td className="tabular">{f.duplicateTimestamps}</Td>
+              <Td className="tabular" dir="ltr">{f.rows.toLocaleString()}<span className="text-slate-300"> / {f.rawRows.toLocaleString()}</span></Td>
+              <Td className="tabular whitespace-nowrap" dir="ltr">{fmtDateRange(f.dateRange)}</Td>
+              <Td className="tabular" dir="ltr">{f.usablePct}%</Td>
+              <Td className="tabular" dir="ltr">{f.duplicateTimestamps}</Td>
               <Td>
                 {f.unverifiedColumns.length > 0
                   ? <span className="text-amber-600 text-xs">{f.unverifiedColumns.join(", ")} unverified</span>
@@ -41,7 +41,9 @@ export function DataQualityTable({ files }: { files: DQFile[] }) {
   );
 }
 
-function Th({ children }: { children: ReactNode }) { return <th className="py-2 pr-4 font-medium">{children}</th>; }
-function Td({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <td className={`py-2.5 pr-4 text-slate-700 ${className}`}>{children}</td>;
+function Th({ children }: { children: ReactNode }) {
+  return <th className="py-2 pe-4 font-medium">{children}</th>;
+}
+function Td({ children, className = "", dir }: { children: ReactNode; className?: string; dir?: "ltr" | "rtl" }) {
+  return <td className={`py-2.5 pe-4 text-slate-700 ${className}`} dir={dir}>{children}</td>;
 }

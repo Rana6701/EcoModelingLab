@@ -10,47 +10,48 @@ import { fmtDateTime, fmtDateRange } from "../lib/format";
 import { seriesFor, type Aggregation } from "../lib/select";
 import type { Station, VariableKey } from "../types";
 import { MapPin, AlertTriangle, Database } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 export function SensorNetwork() {
   const { data, selectedStation, setSelectedStation } = useApp();
   const { stations, timeseries } = data;
+  const { tr } = useLanguage();
+  const s = tr.sensors;
 
   const initial = selectedStation ?? stations[0]?.id ?? "";
   const [activeId, setActiveId] = useState(initial);
   useEffect(() => { if (selectedStation) setActiveId(selectedStation); }, [selectedStation]);
 
-  const station = stations.find((s) => s.id === activeId) ?? stations[0];
+  const station = stations.find((st) => st.id === activeId) ?? stations[0];
 
   return (
     <div className="space-y-6">
-      <SectionTitle title="Sensor network"
-        subtitle={`${stations.length} stations · verified variables only · latest available observations`} />
-
+      <SectionTitle
+        title={s.title}
+        subtitle={s.subtitle.replace("{n}", String(stations.length))}
+      />
       <div className="grid lg:grid-cols-[280px_1fr] gap-6">
-        {/* Master list */}
         <div className="space-y-2">
-          {stations.map((s) => {
-            const active = s.id === station?.id;
+          {stations.map((st) => {
+            const active = st.id === station?.id;
             return (
-              <button key={s.id}
-                onClick={() => { setActiveId(s.id); setSelectedStation(s.id); }}
+              <button key={st.id}
+                onClick={() => { setActiveId(st.id); setSelectedStation(st.id); }}
                 className={`w-full text-left rounded-xl border px-3.5 py-3 transition-colors ${
                   active ? "border-brand-400 bg-brand-50" : "border-slate-200 bg-white hover:border-brand-200"
                 }`}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-ink-900">{s.name}</span>
-                  <StatusBadge status={s.status} />
+                  <span className="font-semibold text-ink-900">{st.name}</span>
+                  <StatusBadge status={st.status} />
                 </div>
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-xs text-slate-400 capitalize">{s.type.replace("+", " + ")}</span>
-                  <RiskBadge category={s.risk.category} score={s.risk.score} />
+                  <span className="text-xs text-slate-400 capitalize">{st.type.replace("+", " + ")}</span>
+                  <RiskBadge category={st.risk.category} score={st.risk.score} />
                 </div>
               </button>
             );
           })}
         </div>
-
-        {/* Detail */}
         {station ? <StationDetail station={station} timeseries={timeseries} /> : <Empty />}
       </div>
     </div>
@@ -58,6 +59,9 @@ export function SensorNetwork() {
 }
 
 function StationDetail({ station, timeseries }: { station: Station; timeseries: ReturnType<typeof useApp>["data"]["timeseries"] }) {
+  const { tr } = useLanguage();
+  const s = tr.sensors;
+
   const vars = timeseries[station.id]?.vars ?? [];
   const [variable, setVariable] = useState<VariableKey>(vars[0] ?? "windSpeed");
   const [agg, setAgg] = useState<Aggregation>("daily");
@@ -73,10 +77,16 @@ function StationDetail({ station, timeseries }: { station: Station; timeseries: 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold text-ink-900">{station.name}</h3>
-            <p className="text-sm text-slate-500 capitalize mt-0.5">{station.type.replace("+", " + ")} station</p>
+            <p className="text-sm text-slate-500 capitalize mt-0.5">
+              {station.type.replace("+", " + ")} {s.stationType}
+            </p>
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-400">
-              <span className="inline-flex items-center gap-1"><MapPin size={12} /> approx. position ({station.lat.toFixed(3)}, {station.lng.toFixed(3)})</span>
-              <span className="inline-flex items-center gap-1"><Database size={12} /> {station.records.toLocaleString()} records</span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin size={12} /> {s.approxPosition} ({station.lat.toFixed(3)}, {station.lng.toFixed(3)})
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Database size={12} /> {station.records.toLocaleString()} {s.records}
+              </span>
               <span>{fmtDateRange(station.dateRange)}</span>
             </div>
           </div>
@@ -96,16 +106,13 @@ function StationDetail({ station, timeseries }: { station: Station; timeseries: 
           </div>
         ) : (
           <p className="text-sm text-slate-400 mt-4">
-            {station.risk.score === null
-              ? "Insufficient verified data to compute a risk score for this station."
-              : "All verified inputs are below their median thresholds, so no variable adds risk points."}
+            {station.risk.score === null ? s.noRiskData : s.noPtsAdded}
           </p>
         )}
       </Card>
 
-      {/* Latest verified values */}
       <Card className="p-5">
-        <SectionTitle title="Latest available observation" subtitle={fmtDateTime(station.lastTimestamp)} />
+        <SectionTitle title={s.latestObs} subtitle={fmtDateTime(station.lastTimestamp)} />
         {station.variables.length === 0 ? <Empty /> : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {station.variables.map((v) => {
@@ -113,10 +120,13 @@ function StationDetail({ station, timeseries }: { station: Station; timeseries: 
               const latest = station.latest[v];
               return (
                 <div key={v} className="bg-slate-50 rounded-xl px-3 py-2.5">
-                  <p className="text-[11px] text-slate-400">{meta.label}
-                    {meta.unitStatus === "assumed" && <span className="text-amber-500"> · assumed unit</span>}
+                  <p className="text-[11px] text-slate-400">
+                    {meta.label}
+                    {meta.unitStatus === "assumed" && <span className="text-amber-500"> · {s.assumedUnit}</span>}
                   </p>
-                  <p className="text-lg font-semibold text-ink-900 tabular">{latest ? formatValue(latest.value, meta) : "—"}</p>
+                  <p className="text-lg font-semibold text-ink-900 tabular">
+                    {latest ? formatValue(latest.value, meta) : "—"}
+                  </p>
                 </div>
               );
             })}
@@ -127,12 +137,12 @@ function StationDetail({ station, timeseries }: { station: Station; timeseries: 
       {station.unverified.length > 0 && (
         <InfoNote tone="amber">
           <span className="inline-flex items-center gap-1.5 font-semibold">
-            <AlertTriangle size={14} /> Unit / quality unverified
+            <AlertTriangle size={14} /> {s.unverifiedTitle}
           </span>
           <ul className="mt-1.5 list-disc pl-5 space-y-0.5">
             {station.unverified.map((u, i) => <li key={i}>{u}</li>)}
           </ul>
-          <p className="mt-1.5">These columns are excluded from statistics, risk scoring and machine-learning models, and are shown only as flagged quality issues.</p>
+          <p className="mt-1.5">{s.unverifiedNote}</p>
         </InfoNote>
       )}
 
@@ -142,18 +152,20 @@ function StationDetail({ station, timeseries }: { station: Station; timeseries: 
         </div>
       )}
 
-      {/* Chart */}
       <Card className="p-5">
-        <SectionTitle title="Observed time series" subtitle="Verified variables only"
+        <SectionTitle title={s.timeSeries} subtitle={s.verifiedOnly}
           right={
             <FilterBar>
-              <Select label="Variable" value={effective ?? ""} onChange={(v) => setVariable(v as VariableKey)}
+              <Select label={s.variable} value={effective ?? ""} onChange={(v) => setVariable(v as VariableKey)}
                 options={vars.map((v) => ({ value: v, label: VARIABLES[v].label }))} />
-              <Select label="Resolution" value={agg} onChange={setAgg}
-                options={[{ value: "daily", label: "Daily" }, { value: "hourly", label: "Hourly" }]} />
+              <Select label={s.resolution} value={agg} onChange={setAgg}
+                options={[{ value: "daily", label: s.daily }, { value: "hourly", label: s.hourly }]} />
             </FilterBar>
           } />
-        {effective ? <TimeSeriesChart data={series} variable={effective} height={300} /> : <Empty hint="No verified variables available for this station." />}
+        {effective
+          ? <TimeSeriesChart data={series} variable={effective} height={300} />
+          : <Empty hint={s.noVars} />
+        }
       </Card>
     </div>
   );

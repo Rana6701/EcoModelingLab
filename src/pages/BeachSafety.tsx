@@ -6,26 +6,18 @@ import type { LucideIcon } from "lucide-react";
 import type { RiskCategory, Station } from "../types";
 import { fmtDateTime } from "../lib/format";
 import { VARIABLES, formatValue } from "../config/unitsConfig";
+import { useLanguage } from "../context/LanguageContext";
 
-const BEACH_STYLE: Record<Exclude<RiskCategory, "Insufficient Data">, {
-  bg: string; border: string; text: string; label: string; Icon: LucideIcon;
-}> = {
-  "Low Risk": {
-    bg: "bg-green-50", border: "border-green-300", text: "text-green-800",
-    label: "Safe to Enter", Icon: CheckCircle2,
-  },
-  "Moderate Risk": {
-    bg: "bg-amber-50", border: "border-amber-300", text: "text-amber-800",
-    label: "Caution Advised", Icon: AlertTriangle,
-  },
-  "High Risk": {
-    bg: "bg-red-50", border: "border-red-300", text: "text-red-800",
-    label: "Dangerous — Avoid Water", Icon: AlertOctagon,
-  },
+type BeachStyleKey = Exclude<RiskCategory, "Insufficient Data">;
+type BeachStyle = { bg: string; border: string; text: string; label: string; Icon: LucideIcon };
+
+const BEACH_STYLE_BASE: Record<BeachStyleKey, Omit<BeachStyle, "label">> = {
+  "Low Risk":      { bg: "bg-green-50", border: "border-green-300",  text: "text-green-800",  Icon: CheckCircle2 },
+  "Moderate Risk": { bg: "bg-amber-50", border: "border-amber-300",  text: "text-amber-800",  Icon: AlertTriangle },
+  "High Risk":     { bg: "bg-red-50",   border: "border-red-300",    text: "text-red-800",    Icon: AlertOctagon },
 };
 
 const PRIORITY: RiskCategory[] = ["High Risk", "Moderate Risk", "Low Risk", "Insufficient Data"];
-
 function worstCategory(cats: RiskCategory[]): RiskCategory {
   for (const c of PRIORITY) if (cats.includes(c)) return c;
   return "Insufficient Data";
@@ -35,12 +27,20 @@ function BeachCard({ beach, station }: {
   beach: { name: string; nameEn: string; stationName: string };
   station: Station;
 }) {
-  const category = station.risk.category as Exclude<RiskCategory, "Insufficient Data">;
-  const style = BEACH_STYLE[category];
-  const Icon = style.Icon;
+  const { tr } = useLanguage();
+  const b = tr.beaches;
+
+  const category = station.risk.category as BeachStyleKey;
+  const base = BEACH_STYLE_BASE[category];
+  const BEACH_LABELS: Record<BeachStyleKey, string> = {
+    "Low Risk":      b.safeToEnter,
+    "Moderate Risk": b.cautionAdvised,
+    "High Risk":     b.dangerous,
+  };
+  const label = BEACH_LABELS[category];
+  const Icon = base.Icon;
   const score = station.risk.score;
 
-  // Only show readings that have an actual value
   const readings: { label: string; value: string; Icon: LucideIcon }[] = [];
   if (station.latest.windSpeed?.value !== null && station.latest.windSpeed !== undefined)
     readings.push({ label: "Wind", value: formatValue(station.latest.windSpeed.value, VARIABLES.windSpeed), Icon: Wind });
@@ -50,15 +50,14 @@ function BeachCard({ beach, station }: {
     readings.push({ label: "Current", value: formatValue(station.latest.currentMag.value, VARIABLES.currentMag), Icon: Gauge });
 
   return (
-    <div className={`rounded-2xl border-2 ${style.border} ${style.bg} overflow-hidden`}>
-      {/* Status banner */}
-      <div className={`flex items-center gap-3 px-5 py-4 border-b ${style.border}`}>
-        <Icon size={26} className={style.text} />
+    <div className={`rounded-2xl border-2 ${base.border} ${base.bg} overflow-hidden`}>
+      <div className={`flex items-center gap-3 px-5 py-4 border-b ${base.border}`}>
+        <Icon size={26} className={base.text} />
         <div className="flex-1 min-w-0">
-          <p className={`text-xl font-bold leading-tight ${style.text}`}>{style.label}</p>
+          <p className={`text-xl font-bold leading-tight ${base.text}`}>{label}</p>
         </div>
         {score !== null && score !== undefined && (
-          <div className={`text-right ${style.text}`}>
+          <div className={`text-right ${base.text}`}>
             <p className="text-3xl font-bold tabular leading-none">{Math.round(score)}</p>
             <p className="text-xs opacity-60">/ 100</p>
           </div>
@@ -66,7 +65,6 @@ function BeachCard({ beach, station }: {
       </div>
 
       <div className="px-5 pt-4 pb-4">
-        {/* Beach name */}
         <div className="flex items-start gap-2 mb-3">
           <MapPin size={15} className="mt-0.5 text-slate-400 shrink-0" />
           <div>
@@ -75,32 +73,29 @@ function BeachCard({ beach, station }: {
           </div>
         </div>
 
-        {/* Readings — only those with actual data */}
         {readings.length > 0 && (
-          <div className={`grid gap-2 mt-2`} style={{ gridTemplateColumns: `repeat(${readings.length}, 1fr)` }}>
-            {readings.map(({ label, value, Icon: ReadIcon }) => (
-              <div key={label} className="bg-white/70 rounded-xl p-3 text-center">
+          <div className="grid gap-2 mt-2" style={{ gridTemplateColumns: `repeat(${readings.length}, 1fr)` }}>
+            {readings.map(({ label: rl, value, Icon: ReadIcon }) => (
+              <div key={rl} className="bg-white/70 rounded-xl p-3 text-center">
                 <ReadIcon size={13} className="mx-auto mb-1 text-slate-400" />
-                <p className="text-[11px] text-slate-400 mb-0.5">{label}</p>
+                <p className="text-[11px] text-slate-400 mb-0.5">{rl}</p>
                 <p className="text-sm font-bold tabular text-ink-900">{value}</p>
               </div>
             ))}
           </div>
         )}
 
-        {/* Risk contributions */}
         {station.risk.contributions.length > 0 && (
           <div className="mt-3 space-y-0.5">
             {station.risk.contributions.slice(0, 2).map((c) => (
-              <p key={c.variable} className={`text-xs ${style.text} opacity-80`}>· {c.text}</p>
+              <p key={c.variable} className={`text-xs ${base.text} opacity-80`}>· {c.text}</p>
             ))}
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-3 pt-3 border-t border-black/5 flex items-center gap-1.5 text-[11px] text-slate-400">
           <Clock size={11} />
-          <span>Last update: {fmtDateTime(station.lastTimestamp)}</span>
+          <span>{b.lastUpdate} {fmtDateTime(station.lastTimestamp)}</span>
           <span className="mx-1">·</span>
           <span>{beach.stationName}</span>
         </div>
@@ -112,75 +107,75 @@ function BeachCard({ beach, station }: {
 export function BeachSafety() {
   const { data } = useApp();
   const { beaches, stations } = data;
+  const { tr } = useLanguage();
+  const b = tr.beaches;
 
   const stationMap = useMemo(
     () => new Map(stations.map((s) => [s.id, s])),
     [stations]
   );
 
-  // Only beaches whose station has actual risk data
   const activeBeaches = useMemo(
-    () => beaches.filter((b) => {
-      const s = stationMap.get(b.stationId);
+    () => beaches.filter((bch) => {
+      const s = stationMap.get(bch.stationId);
       return s && s.risk.category !== "Insufficient Data";
     }),
     [beaches, stationMap]
   );
 
   const overallCategory = useMemo<RiskCategory>(
-    () => worstCategory(activeBeaches.map((b) => stationMap.get(b.stationId)!.risk.category)),
+    () => worstCategory(activeBeaches.map((bch) => stationMap.get(bch.stationId)!.risk.category)),
     [activeBeaches, stationMap]
   );
 
-  const overallStyle = overallCategory !== "Insufficient Data"
-    ? BEACH_STYLE[overallCategory as Exclude<RiskCategory, "Insufficient Data">]
+  const BEACH_LABELS: Record<BeachStyleKey, string> = {
+    "Low Risk":      b.safeToEnter,
+    "Moderate Risk": b.cautionAdvised,
+    "High Risk":     b.dangerous,
+  };
+
+  const overallBase = overallCategory !== "Insufficient Data"
+    ? BEACH_STYLE_BASE[overallCategory as BeachStyleKey]
+    : null;
+  const overallLabel = overallCategory !== "Insufficient Data"
+    ? BEACH_LABELS[overallCategory as BeachStyleKey]
     : null;
 
   return (
     <div className="space-y-6">
-      <SectionTitle
-        title="Beach Safety"
-        subtitle="Water-entry risk level per beach, derived from the nearest sensor station"
-      />
+      <SectionTitle title={b.title} subtitle={b.subtitle} />
 
-      {/* Overall lake banner */}
-      {overallStyle && (
-        <Card className={`p-5 border-2 ${overallStyle.border} ${overallStyle.bg}`}>
+      {overallBase && overallLabel && (
+        <Card className={`p-5 border-2 ${overallBase.border} ${overallBase.bg}`}>
           <div className="flex items-center gap-4">
-            <overallStyle.Icon size={32} className={overallStyle.text} />
+            <overallBase.Icon size={32} className={overallBase.text} />
             <div>
-              <p className={`text-xl font-bold ${overallStyle.text}`}>
-                Overall lake status: {overallStyle.label}
+              <p className={`text-xl font-bold ${overallBase.text}`}>
+                {b.overallStatus} {overallLabel}
               </p>
-              <p className={`text-sm ${overallStyle.text} opacity-75`}>
-                Worst reading across all {activeBeaches.length} monitored beaches
+              <p className={`text-sm ${overallBase.text} opacity-75`}>
+                {b.worstReading.replace("{n}", String(activeBeaches.length))}
               </p>
             </div>
           </div>
         </Card>
       )}
 
-      {/* Beach grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {activeBeaches.map((beach) => (
-          <BeachCard
-            key={beach.id}
-            beach={beach}
-            station={stationMap.get(beach.stationId)!}
-          />
+          <BeachCard key={beach.id} beach={beach} station={stationMap.get(beach.stationId)!} />
         ))}
       </div>
 
-      {/* Color guide */}
       <Card className="p-5">
-        <p className="text-sm font-semibold text-slate-700 mb-3">Color guide</p>
+        <p className="text-sm font-semibold text-slate-700 mb-3">{b.colorGuide}</p>
         <div className="grid sm:grid-cols-3 gap-3">
-          {(Object.entries(BEACH_STYLE) as [string, typeof BEACH_STYLE[keyof typeof BEACH_STYLE]][]).map(([, s]) => {
+          {(Object.entries(BEACH_STYLE_BASE) as [BeachStyleKey, typeof BEACH_STYLE_BASE[BeachStyleKey]][]).map(([key, s]) => {
             const Icon = s.Icon;
             return (
-              <div key={s.label} className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${s.bg} ${s.border}`}>
+              <div key={key} className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${s.bg} ${s.border}`}>
                 <Icon size={18} className={s.text} />
-                <p className={`font-semibold text-sm ${s.text}`}>{s.label}</p>
+                <p className={`font-semibold text-sm ${s.text}`}>{BEACH_LABELS[key]}</p>
               </div>
             );
           })}
@@ -189,10 +184,9 @@ export function BeachSafety() {
 
       <InfoNote tone="amber">
         <span className="inline-flex items-center gap-1.5 font-semibold">
-          <ShieldAlert size={14} /> Important disclaimer:
+          <ShieldAlert size={14} /> {b.disclaimerTitle}
         </span>{" "}
-        This is an academic research prototype. Risk ratings are not official swimming-safety
-        instructions. Always consult the on-duty lifeguard before entering the water.
+        {b.disclaimer}
       </InfoNote>
     </div>
   );

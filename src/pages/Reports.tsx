@@ -8,58 +8,8 @@ import { Card, SectionTitle, Empty, InfoNote, Pill } from "../components/ui";
 import { StatisticalTestCard } from "../components/StatisticalTestCard";
 import { fmtNum } from "../lib/format";
 import type { DescriptiveStat } from "../types";
-import { Download, Printer, FlaskConical } from "lucide-react";
-
-// ── Research summary table ───────────────────────────────────────────────────
-
-const RESEARCH_SUMMARY = [
-  {
-    question: "Does wind speed affect wave height?",
-    variables: "Wind Speed, Hs",
-    test: "Pearson / Spearman",
-    result: "Positive correlation",
-    resultTone: "blue" as const,
-    what: "We tested whether wind speed recorded at Bteha station is linearly correlated with significant wave height (Hs) at Golan Beach (KNW).",
-    why: "Pearson correlation is appropriate when both variables are continuous and a linear relationship is expected. Spearman was added as a non-parametric check in case the distribution is skewed.",
-    conclusion: "A statistically significant positive correlation was found (r = 0.186, p < 0.001). Wind speed does influence wave height, though the moderate effect size shows that other factors — such as fetch distance and wind direction — also contribute.",
-  },
-  {
-    question: "Does wave height differ across risk categories?",
-    variables: "Hs, Risk Level",
-    test: "ANOVA",
-    result: "Higher waves → higher risk",
-    resultTone: "amber" as const,
-    what: "We tested whether the mean wave height is significantly different across the three risk categories (Low, Moderate, High).",
-    why: "ANOVA (Analysis of Variance) is the standard test for comparing means across more than two independent groups.",
-    conclusion: "Higher waves are consistently associated with higher risk scores. This confirms that wave height is a meaningful and validated predictor in the risk model.",
-  },
-  {
-    question: "Are risk levels distributed differently by month?",
-    variables: "Month, Risk Level",
-    test: "Chi-Square",
-    result: "Risk distribution differs",
-    resultTone: "amber" as const,
-    what: "We tested whether the distribution of risk categories (Low / Moderate / High) is independent of the month of the year.",
-    why: "Chi-square test of independence is appropriate when both variables are categorical, and we want to know if one affects the frequency of the other.",
-    conclusion: "Risk levels are not uniformly distributed across months (χ² = 664, p < 0.001). Winter and spring months tend to show higher-risk conditions, consistent with seasonal storm patterns on Lake Kinneret.",
-  },
-  {
-    question: "Can risk score be predicted from sensor data?",
-    variables: "Wind, Hs, Current, Rain",
-    test: "Random Forest Regression",
-    result: "Model explains ~70 % of variance",
-    resultTone: "green" as const,
-    what: "We trained a Random Forest model to predict significant wave height (used as a proxy for risk) from meteorological and hydrological variables.",
-    why: "Regression models quantify predictive power. Random Forest was chosen for its robustness to non-linearity and its ability to rank feature importance.",
-    conclusion: "The model achieved R² = 0.694 on the held-out test set. Wave height — and therefore risk — can be meaningfully predicted from wind and current data, supporting the design of the rule-based risk model.",
-  },
-];
-
-const TONE_STYLE = {
-  blue:  "bg-blue-50 border-blue-200 text-blue-700",
-  amber: "bg-amber-50 border-amber-200 text-amber-700",
-  green: "bg-green-50 border-green-200 text-green-700",
-};
+import { Download, Printer } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 function downloadBlob(filename: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
@@ -82,126 +32,70 @@ export function Reports() {
   const { data } = useApp();
   const { statistics, manifest } = data;
   const { descriptive, tests, correlationMatrix, ml, alpha } = statistics;
+  const { tr } = useLanguage();
+  const r = tr.reports;
 
   const heat = useMemo(() => correlationMatrix, [correlationMatrix]);
+  const n = manifest.excludedColumns.length;
+  const colWord = n === 1 ? r.column : r.columns;
+
+  const tableHeaders = [
+    r.colVariable, r.colN, r.colMissing, r.colMean, r.colMedian,
+    r.colMin, r.colMax, r.colStd, r.colP25, r.colP75,
+  ];
 
   return (
     <div className="space-y-6">
-      <SectionTitle title="Reports & statistics"
-        subtitle={`Descriptive summaries, hypothesis tests (α = ${alpha}) and an exploratory model — verified variables only`}
+      <SectionTitle
+        title={r.title}
+        subtitle={r.subtitle.replace("{alpha}", String(alpha))}
         right={
           <div className="flex gap-2 no-print">
             <button onClick={() => downloadBlob("smartkinneret_descriptive.csv", descriptiveToCsv(descriptive), "text/csv")}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 border border-brand-200 rounded-lg px-3 py-1.5 hover:bg-brand-50">
-              <Download size={15} /> CSV
+              <Download size={15} /> {r.csv}
             </button>
             <button onClick={() => downloadBlob("smartkinneret_statistics.json", JSON.stringify(statistics, null, 2), "application/json")}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 border border-brand-200 rounded-lg px-3 py-1.5 hover:bg-brand-50">
-              <Download size={15} /> JSON
+              <Download size={15} /> {r.json}
             </button>
             <button onClick={() => window.print()}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50">
-              <Printer size={15} /> Print
+              <Printer size={15} /> {r.print}
             </button>
           </div>
-        } />
+        }
+      />
 
       <InfoNote>
-        All analyses below exclude columns flagged as unit/quality unverified
-        ({manifest.excludedColumns.length} column{manifest.excludedColumns.length === 1 ? "" : "s"}). Significance
-        is assessed at α = {alpha}; where a parametric assumption is violated a non-parametric equivalent is reported.
+        {r.infoNote.replace("{n}", String(n)).replace("{col}", colWord).replace("{alpha}", String(alpha))}
       </InfoNote>
 
-      {/* Research summary */}
       <Card className="p-5">
-        <SectionTitle
-          title="Research summary"
-          subtitle="What we tested, why we chose each method, and what we found — in plain language"
-        />
-
-        {/* Compact table */}
-        <div className="overflow-x-auto scroll-thin mt-3 mb-5">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500 text-xs font-semibold uppercase tracking-wide">
-                <th className="pb-2 pr-6">Research Question</th>
-                <th className="pb-2 pr-6">Variables</th>
-                <th className="pb-2 pr-6">Test</th>
-                <th className="pb-2">Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {RESEARCH_SUMMARY.map((r, i) => (
-                <tr key={i} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2.5 pr-6 font-medium text-slate-800">{r.question}</td>
-                  <td className="py-2.5 pr-6 text-slate-500">{r.variables}</td>
-                  <td className="py-2.5 pr-6 text-slate-500">{r.test}</td>
-                  <td className="py-2.5">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${TONE_STYLE[r.resultTone]}`}>
-                      {r.result}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Plain-language cards */}
-        <div className="space-y-3">
-          {RESEARCH_SUMMARY.map((r, i) => (
-            <div key={i} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-start gap-3">
-                <FlaskConical size={16} className="text-brand-500 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-slate-800 text-sm">{r.question}</p>
-                  <div className="grid sm:grid-cols-3 gap-x-6 gap-y-1.5 mt-2">
-                    <div>
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">What we tested</p>
-                      <p className="text-xs text-slate-600">{r.what}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Why this test</p>
-                      <p className="text-xs text-slate-600">{r.why}</p>
-                    </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Conclusion</p>
-                      <p className="text-xs text-slate-600">{r.conclusion}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Descriptive statistics */}
-      <Card className="p-5">
-        <SectionTitle title="Descriptive statistics" subtitle="Per verified variable, across the observed record" />
+        <SectionTitle title={r.descriptiveTitle} subtitle={r.descriptiveSubtitle} />
         {Object.keys(descriptive).length === 0 ? <Empty /> : (
           <div className="overflow-x-auto scroll-thin">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-slate-400 border-b border-slate-200">
-                  {["Variable", "n", "Missing", "Mean", "Median", "Min", "Max", "Std", "P25", "P75"].map((h) => (
-                    <th key={h} className="py-2 pr-4 font-medium whitespace-nowrap">{h}</th>
+                <tr className="text-start text-slate-400 border-b border-slate-200">
+                  {tableHeaders.map((h) => (
+                    <th key={h} className="py-2 pe-4 font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {Object.entries(descriptive).map(([k, s]) => (
                   <tr key={k} className="border-b border-slate-100">
-                    <td className="py-2 pr-4 text-slate-700">{k}</td>
-                    <td className="py-2 pr-4 tabular">{s.count.toLocaleString()}</td>
-                    <td className="py-2 pr-4 tabular text-slate-400">{s.missing.toLocaleString()}</td>
-                    <td className="py-2 pr-4 tabular">{fmtNum(s.mean)}</td>
-                    <td className="py-2 pr-4 tabular">{fmtNum(s.median)}</td>
-                    <td className="py-2 pr-4 tabular">{fmtNum(s.min)}</td>
-                    <td className="py-2 pr-4 tabular">{fmtNum(s.max)}</td>
-                    <td className="py-2 pr-4 tabular">{fmtNum(s.std)}</td>
-                    <td className="py-2 pr-4 tabular">{fmtNum(s.p25)}</td>
-                    <td className="py-2 pr-4 tabular">{fmtNum(s.p75)}</td>
+                    <td className="py-2 pe-4 text-slate-700">{k}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{s.count.toLocaleString()}</td>
+                    <td className="py-2 pe-4 tabular text-slate-400" dir="ltr">{s.missing.toLocaleString()}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{fmtNum(s.mean)}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{fmtNum(s.median)}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{fmtNum(s.min)}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{fmtNum(s.max)}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{fmtNum(s.std)}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{fmtNum(s.p25)}</td>
+                    <td className="py-2 pe-4 tabular" dir="ltr">{fmtNum(s.p75)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -210,17 +104,13 @@ export function Reports() {
         )}
       </Card>
 
-      {/* Correlation heatmap */}
       <Card className="p-5">
-        <SectionTitle title="Correlation matrix" subtitle="Pearson r between aligned hourly series (verified variables)" />
-        {!heat ? <Empty hint="Not enough overlapping data to compute correlations." /> : (
-          <Heatmap labels={heat.labels} values={heat.values} />
-        )}
+        <SectionTitle title={r.corrTitle} subtitle={r.corrSubtitle} />
+        {!heat ? <Empty hint={r.noCorr} /> : <Heatmap labels={heat.labels} values={heat.values} />}
       </Card>
 
-      {/* Hypothesis tests */}
       <div>
-        <SectionTitle title="Hypothesis tests" subtitle="Each card states the question, hypotheses, assumptions and decision" />
+        <SectionTitle title={r.testsTitle} subtitle={r.testsSubtitle} />
         {tests.length === 0 ? <Card className="p-5"><Empty /></Card> : (
           <div className="space-y-4">
             {tests.map((t) => <StatisticalTestCard key={t.id} test={t} alpha={alpha} />)}
@@ -228,26 +118,25 @@ export function Reports() {
         )}
       </div>
 
-      {/* ML section */}
       <Card className="p-5">
-        <SectionTitle title="Exploratory model (machine learning)" subtitle="Optional — supplements, does not replace, the transparent rule-based risk model" />
-        {!ml ? <Empty hint="No model was trained (insufficient aligned data)." /> : (
+        <SectionTitle title={r.mlTitle} subtitle={r.mlSubtitle} />
+        {!ml ? <Empty hint={r.noModel} /> : (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               <Pill tone="blue">{ml.model}</Pill>
-              <Pill tone="slate">target: {ml.target}</Pill>
+              <Pill tone="slate">{r.target} {ml.target}</Pill>
               <Pill tone="slate">{ml.split ?? "train/test split"}</Pill>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <Metric label="R² (test)" value={fmtNum(ml.r2, 3)} />
-              <Metric label="MAE" value={fmtNum(ml.mae, 3)} />
-              <Metric label="RMSE" value={fmtNum(ml.rmse, 3)} />
-              <Metric label="train / test n" value={`${ml.trainN.toLocaleString()} / ${ml.testN.toLocaleString()}`} />
+              <Metric label={r.r2} value={fmtNum(ml.r2, 3)} />
+              <Metric label={r.mae} value={fmtNum(ml.mae, 3)} />
+              <Metric label={r.rmse} value={fmtNum(ml.rmse, 3)} />
+              <Metric label={r.trainTestN} value={`${ml.trainN.toLocaleString()} / ${ml.testN.toLocaleString()}`} />
             </div>
 
             <div className="grid lg:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm font-medium text-slate-600 mb-2">Feature importance</p>
+                <p className="text-sm font-medium text-slate-600 mb-2">{r.featureImportance}</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart layout="vertical" data={ml.featureImportance}
                     margin={{ top: 4, right: 16, bottom: 4, left: 24 }}>
@@ -255,20 +144,20 @@ export function Reports() {
                     <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} />
                     <YAxis type="category" dataKey="feature" tick={{ fontSize: 11, fill: "#64748b" }} width={80} />
                     <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }}
-                      formatter={(v: number) => [v.toFixed(3), "importance"]} />
+                      formatter={(v: number) => [v.toFixed(3), r.importance]} />
                     <Bar dataKey="importance" fill="#0891b2" radius={[0, 4, 4, 0]} isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
               <div>
-                <p className="text-sm font-medium text-slate-600 mb-2">Actual vs predicted (test set)</p>
+                <p className="text-sm font-medium text-slate-600 mb-2">{r.actualVsPredicted}</p>
                 <ResponsiveContainer width="100%" height={220}>
                   <ScatterChart margin={{ top: 4, right: 16, bottom: 16, left: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-                    <XAxis type="number" dataKey="a" name="actual" tick={{ fontSize: 11, fill: "#94a3b8" }}
-                      label={{ value: "actual", position: "insideBottom", offset: -8, fontSize: 11, fill: "#64748b" }} />
-                    <YAxis type="number" dataKey="p" name="predicted" tick={{ fontSize: 11, fill: "#94a3b8" }} width={42}
-                      label={{ value: "predicted", angle: -90, position: "insideLeft", fontSize: 11, fill: "#64748b" }} />
+                    <XAxis type="number" dataKey="a" name={r.actual} tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      label={{ value: r.actual, position: "insideBottom", offset: -8, fontSize: 11, fill: "#64748b" }} />
+                    <YAxis type="number" dataKey="p" name={r.predicted} tick={{ fontSize: 11, fill: "#94a3b8" }} width={42}
+                      label={{ value: r.predicted, angle: -90, position: "insideLeft", fontSize: 11, fill: "#64748b" }} />
                     <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 12 }} cursor={{ strokeDasharray: "3 3" }} />
                     <ReferenceLine segment={refSegment(ml.actualVsPredicted)} stroke="#ef4444" strokeDasharray="4 4" />
                     <Scatter data={ml.actualVsPredicted.map(([a, p]) => ({ a, p }))} fill="#0891b2" fillOpacity={0.4} isAnimationActive={false} />
@@ -306,11 +195,11 @@ function Heatmap({ labels, values }: { labels: string[]; values: number[][] }) {
     return r >= 0 ? `rgba(8,145,178,${0.12 + a * 0.7})` : `rgba(239,68,68,${0.12 + a * 0.7})`;
   };
   return (
-    <div className="overflow-x-auto scroll-thin">
+    <div className="overflow-x-auto scroll-thin" dir="ltr">
       <table className="border-collapse text-xs">
         <thead>
           <tr>
-            <th className="p-2"></th>
+            <th className="p-2" />
             {labels.map((l) => <th key={l} className="p-2 text-slate-500 font-medium align-bottom whitespace-nowrap">{l}</th>)}
           </tr>
         </thead>

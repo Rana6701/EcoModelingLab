@@ -4,13 +4,23 @@
 
 :root { color-scheme: light; }
 
-html, body, #root { height: 100%; }
+html {
+  height: 100%;
+  overflow-x: hidden;   /* prevent any element from causing horizontal scroll */
+}
 body {
+  min-height: 100%;
+  overflow-x: hidden;
   margin: 0;
   background: #f1f5f9;
   color: #0f172a;
-  font-feature-settings: "tnum" 1; /* tabular numerals for scientific data */
+  font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
+}
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* tabular numerals for data-dense readouts */
